@@ -14,7 +14,7 @@ import (
 // Binary name used for built package
 const binaryName = "watcher"
 
-var watcherFlags = []string{"run", "watch", "watch-vendor"}
+var watcherFlags = []string{"run", "watch", "watch-vendor", "run-path"}
 
 // Params is used for keeping go-watcher and application flag parameters
 type Params struct {
@@ -72,8 +72,14 @@ func generateBinaryPrefix() string {
 
 // runCommand runs the command with given name and arguments. It copies the
 // logs to standard output
-func runCommand(name string, args ...string) (*exec.Cmd, error) {
-	cmd := exec.Command(name, args...)
+func runCommand(path string, name string, args ...string) (*exec.Cmd, error) {
+	// 如果path不为空，则表示需要进入path目录执行
+	var cmd *exec.Cmd
+	cmd = exec.Command(name, args...)
+	if path != "" {
+		cmd.Dir = path + "/"
+	}
+
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return cmd, err
@@ -97,7 +103,6 @@ func runCommand(name string, args ...string) (*exec.Cmd, error) {
 // ParseArgs extracts the application parameters from args and returns
 // Params instance with separated watcher and application parameters
 func ParseArgs(args []string) *Params {
-
 	params := NewParams()
 
 	// remove the command argument
@@ -116,7 +121,6 @@ func ParseArgs(args []string) *Params {
 			if strings.HasPrefix(args[i+1], "-") {
 				log.Fatalf("missing parameter value: %s", arg)
 			}
-
 			params.Watcher[arg] = args[i+1]
 			i++
 			continue

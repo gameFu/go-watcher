@@ -7,6 +7,7 @@ package watcher
 import (
 	"log"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/fatih/color"
 )
@@ -28,28 +29,37 @@ func NewRunner() *Runner {
 }
 
 // Run initializes runner with given parameters.
+// 运行编译好的go二进制
 func (r *Runner) Run(p *Params) {
 	for fileName := range r.start {
 
 		color.Green("Running %s...\n", p.Get("run"))
-
-		cmd, err := runCommand(fileName, p.Package...)
+		packageAbsPath, err := filepath.Abs(p.packagePath())
+		if err != nil {
+			log.Printf("Could not get package abs path path: %s \n", err)
+		}
+		devRunPath := packageAbsPath + p.Get("run-path")
+		// 运行二进制是使用了非阻塞的start, 问题是无法杀死进程
+		cmd, err := runCommand(devRunPath, fileName, p.Package...)
 		if err != nil {
 			log.Printf("Could not run the go binary: %s \n", err)
+			// start运行的命令外界直接使用sinagl无法杀死，要调用kill命令
 			r.kill(cmd)
 
 			continue
 		}
 
 		r.cmd = cmd
-		removeFile(fileName)
 
-		go func(cmd *exec.Cmd) {
+		go func(cmd *exec.Cmd, fileName string) {
+			// wait执行时说明收到了外界的终止sinagl
 			if err := cmd.Wait(); err != nil {
+				//运行二进制后就直接把二进制文件删除
+				removeFile(fileName)
 				log.Printf("process interrupted: %s \n", err)
 				r.kill(cmd)
 			}
-		}(r.cmd)
+		}(r.cmd, fileName)
 	}
 }
 

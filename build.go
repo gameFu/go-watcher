@@ -37,9 +37,9 @@ func (b *Builder) Build(p *Params) {
 
 		log.Println("build started")
 		color.Cyan("Building %s...\n", pkg)
-
+		// 指定二进制输出的目录
 		// build package
-		cmd, err := runCommand("go", "build", "-i", "-o", fileName, pkg)
+		cmd, err := runCommand("", "go", "build", "-i", "-o", fileName, pkg)
 		if err != nil {
 			log.Fatalf("Could not run 'go build' command: %s", err)
 			continue
